@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="hy">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>MathFlow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Third-party CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr@1.8.2/dist/themes/classic.min.css" />
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!--
+    MathJax configuration MUST appear before the MathJax script tag.
+    FIX #15: startup.ready calls window.initApp() — no nested setTimeout chains.
+  -->
+  <script>
+    window.MathJax = {
+      loader: {
+        load: ['[tex]/color', '[tex]/boldsymbol', '[tex]/braket', '[tex]/mathtools', '[tex]/physics', '[tex]/textcomp', '[tex]/bboldx']
+      },
+      tex: {
+        packages: { '[+]': ['color', 'boldsymbol', 'braket', 'mathtools', 'physics', 'textcomp', 'bboldx'] },
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true,
+        tags: 'none',
+        macros: {
+          angl: ['\\langle #1 \\rangle', 1],
+          RR: '\\mathbb{R}', NN: '\\mathbb{N}', ZZ: '\\mathbb{Z}',
+          QQ: '\\mathbb{Q}', CC: '\\mathbb{C}', PP: '\\mathbb{P}',
+          EE: '\\mathbb{E}',
+          tg: '\\operatorname{tg}',
+          ctg: '\\operatorname{ctg}',
+          arctg: '\\operatorname{arctg}',
+          arcctg: '\\operatorname{arcctg}',
+          sgn: '\\operatorname{sgn}',
+          rank: '\\operatorname{rank}',
+          mod: '\\operatorname{mod}',
+          Re: '\\operatorname{Re}',
+          Im: '\\operatorname{Im}',
+          erf: '\\operatorname{erf}',
+          Var: '\\operatorname{Var}',
+          Cov: '\\operatorname{Cov}',
+          Corr: '\\operatorname{Corr}',
+          given: '\\mathrel{\\vert}'
+        }
+      },
+      svg: {
+        fontCache: 'local',
+        scale: 1,
+        displayAlign: 'left',
+        minScale: 0.5
+      },
+      startup: {
+        ready() {
+          MathJax.startup.defaultReady();
+          // Single synchronization point — no setTimeout needed (FIX #15)
+          MathJax.startup.promise.then(() => {
+            if (window.initApp) window.initApp();
+          });
+        }
+      }
+    };
+  </script>
+</head>
+
+<body>
+
+  <!-- Floating Symbols Button -->
+  <button id="floatingSymbolsBtn" title="Open Symbols Panel">
+    <i class="fas fa-superscript"></i>
+  </button>
+
+  <!-- Draggable Symbols Window -->
+  <div class="symbols-draggable-window" id="draggableSymbolsWindow">
+    <div class="symbols-draggable-header" id="draggableSymbolsHeader">
+      <h3><i class="fas fa-superscript"></i> Սիմվոլներ &amp; Կառուցվածքներ</h3>
+      <button id="closeDraggableSymbolsPanel" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="symbols-draggable-content">
+      <input type="text" class="symbols-draggable-search" id="draggableSymbolSearch" placeholder="Որոնել սիմվոլներ...">
+      <div class="symbols-draggable-tabs" id="draggableTabButtons"></div>
+      <div class="symbols-draggable-grid" id="draggableSymbolsGrid"></div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="main-content">
+      <div class="main-content-inner">
+
+        <!-- Header -->
+        <div class="header">
+          <div class="logo">
+            <div class="logo-icon">
+              <div class="trident-logo">
+                <div class="outer-circle"></div>
+                <div class="background-glow"></div>
+                <div class="logo-icon">
+                  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50,20 L50,80" />
+                    <path d="M30,40 L70,40" />
+                    <path d="M40,62 Q50,74 60,62" />
+                    <path d="M37.5,46 Q50,60 62.5,46" />
+                    <path d="M35,30 Q50,45 65,30" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <h1>MathFlow</h1>
+          </div>
+          <p class="tagline">Ստեղծեք մաթեմատիկական արտահայտություններ հեշտությամբ</p>
+        </div>
+
+        <!-- Editor Section -->
+        <section class="editor-section fade-in">
+          <div class="section-header">
+            <div class="section-title">
+              <div class="section-icon"><i class="fas fa-edit"></i></div>
+              <span>Բանաձևերի խմբագրիչ</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;">
+              <button class="btn btn-help gentle-glow" id="helpToggleBtn" style="min-width: 105px;" title="Խմբագրիչի ցուցումներ">
+                <span class="help-icon-wrapper">
+                  <span class="help-icon-glow"></span>
+                  <i class="fas fa-question-circle help-icon gentle-pulse"></i>
+                </span>
+                <span>Օգնություն</span>
+              </button>
+              <button class="btn btn-primary" id="examplesToggleBtn" style="min-width: 105px;">
+                <i class="fas fa-lightbulb"></i> Օրինակներ
+              </button>
+              <button class="btn btn-pro" id="environmentsToggleBtn" style="min-width: 105px;">
+                <i class="fas fa-layer-group"></i> Միջավայր
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-container">
+            <textarea class="editor-textarea" id="latexInput"
+              placeholder="Մուտքագրեք արտահայտությունը այստեղ...">\sin(\omega x + \phi)</textarea>
+            <div class="editor-actions">
+              <button class="btn btn-secondary" id="undoBtn"><i class="fas fa-history"></i> Հետ</button>
+              <button class="btn btn-secondary" id="redoBtn"><i class="fas fa-redo"></i> Առաջ</button>
+              <button class="btn btn-danger" id="clearAllConfirmBtn"><i class="fas fa-trash"></i> Մաքրել
+                ամբողջը</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Preview Section -->
+        <section class="preview-section fade-in">
+          <div class="section-title">
+            <div class="section-icon"><i class="fas fa-eye"></i></div>
+            <span>Նախադիտում</span>
+          </div>
+
+          <div class="preview-controls">
+            <div>
+              <button id="sizeDropdownBtn" class="btn btn-secondary" style="padding:6px 12px;font-size:13px">
+                Չափսը (px) <i class="fas fa-chevron-down" style="margin-left:4px"></i>
+              </button>
+              <div id="sizeDropdownMenu"></div>
+            </div>
+            <div>
+              <button id="verticalSpaceDropdownBtn" class="btn btn-secondary" style="padding:6px 12px;font-size:13px">
+                Տողերի միջև <i class="fas fa-arrows-alt-v" style="margin-left:4px"></i>
+              </button>
+              <div id="verticalSpaceDropdownMenu"></div>
+            </div>
+          </div>
+
+          <div class="preview-container" id="previewContainer">
+            <div id="preview">
+              <div class="preview-placeholder">
+                <div class="preview-icon"><i class="fas fa-infinity"></i></div>
+                <p>Ձեր բանաձևը կհայտնվի այստեղ</p>
+                <p style="font-size:14px;margin-top:8px">Խմբագրեք բանաձևը՝ փոփոխությունները տեսնելու համար</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="color-swatch-container">
+            <div id="colorSwatch" title="Բացել տեքստի գույնի ընտրիչ"></div>
+            <div id="bgColorSwatch" title="Բացել ֆոնի գույնի ընտրիչ"></div>
+            <div class="color-instruction">Նշեք տեքստը, այնուհետև սեղմեք գույնը կիրառելու համար։</div>
+          </div>
+        </section>
+
+      </div><!-- /.main-content-inner -->
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Symbols Panel -->
+        <section class="symbols-panel fade-in">
+          <div class="section-title">
+            <div class="section-icon"><i class="fas fa-superscript"></i></div>
+            <span>Սիմվոլներ &amp; Կառուցվածքներ</span>
+          </div>
+          <input type="text" class="symbols-search" id="symbolSearch" placeholder="Որոնել սիմվոլներ...">
+          <div class="symbols-tabs" id="tabButtons"></div>
+          <div class="symbols-grid" id="symbolsGrid"></div>
+        </section>
+
+        <!-- Tools Panel -->
+        <section class="tools-panel fade-in">
+          <div class="section-title">
+            <div class="section-icon"><i class="fas fa-palette"></i></div>
+            <span>Գործիքներ</span>
+          </div>
+          <div class="tool-options">
+            <button class="btn btn-secondary tool-tip" id="formatNewLinesBtn" style="justify-content:flex-start">
+              <i class="fas fa-paragraph"></i> Սկսել նոր տողից
+              <span class="tooltip-text">Խմբագրիչում \\\-ով սկսվող արտահայտությունները կսկսեն նոր տողից</span>
+            </button>
+            <button class="btn btn-secondary tool-tip" id="addUrlBtn" style="justify-content:flex-start">
+              <i class="fas fa-link"></i> Ավելացնել հղում
+              <span class="tooltip-text">Ընտրեք տեքստը, այնուհետև սեղմեք հղում ավելացնելու համար</span>
+            </button>
+            <button class="btn btn-secondary tool-tip" id="addDateTimeBtn" style="justify-content:flex-start">
+              <i class="fas fa-clock"></i> Ավելացնել օրը և ժամը
+              <span class="tooltip-text">Ավելացնում է ընթացիկ ամսաթիվը և ժամը</span>
+            </button>
+            <button class="btn btn-secondary tool-tip" id="duplicateLineBtn" style="justify-content:flex-start">
+              <i class="fas fa-copy"></i> Կրկնօրինակել տողը
+              <span class="tooltip-text">Կրկնօրինակում է ընթացիկ տողը</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Export Panel -->
+        <section class="export-panel fade-in">
+          <div class="export-title"><i class="fas fa-download"></i> Արտահանման տարբերակներ</div>
+          <div class="export-options">
+            <button class="export-btn png" id="downloadPNG"><i class="fas fa-image"></i> Ներբեռնել PNG</button>
+            <button class="export-btn svg pro" id="downloadSVG"><i class="fas fa-file-code"></i> Ներբեռնել SVG</button>
+          </div>
+          <div class="features">
+            <div class="feature">
+              <div class="feature-icon"><i class="fas fa-infinity"></i></div>
+              <div class="feature-label">Անթիվ գույներ</div>
+            </div>
+            <div class="feature">
+              <div class="feature-icon"><i class="fas fa-shapes"></i></div>
+              <div class="feature-label">Տարատեսակ սիմվոլներ</div>
+            </div>
+            <div class="feature">
+              <div class="feature-icon"><i class="fas fa-cube"></i></div>
+              <div class="feature-label">Պատրաստի օրինակներ</div>
+            </div>
+          </div>
+        </section>
+      </div><!-- /.sidebar -->
+    </div><!-- /.main-content -->
+
+    <div class="footer">
+      <p>MathFlow • Մաթեմատիկական արտահայտությունների ժամանակակից խմբագրիչ •</p>
+    </div>
+  </div><!-- /.layout -->
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Clear confirmation -->
+  <div class="fresh-modal" id="freshModal">
+    <div class="fresh-modal-content">
+      <div class="fresh-modal-icon"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="fresh-modal-title">Մաքրել ամբողջը</div>
+      <div class="fresh-modal-text">Վստա՞հ եք, որ ցանկանում եք մաքրել ամբողջ բովանդակությունը:<br>Այս գործողությունը
+        հնարավոր չէ հետարկել:</div>
+      <div class="fresh-modal-buttons">
+        <button class="fresh-modal-button no" id="modalNo">Չեղարկել</button>
+        <button class="fresh-modal-button yes" id="modalYes">Այո</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP MODAL (ADDED) -->
+  <div class="help-modal" id="helpModal">
+    <div class="help-modal-content">
+      <div class="help-modal-header">
+        <h3><i class="fas fa-question-circle"></i> Խմբագրիչի ցուցումներ</h3>
+        <p>Օգտագործեք այս ցուցումները ավելի արդյունավետ աշխատելու համար</p>
+        <button class="help-close-btn" id="helpCloseBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="help-content">
+        <div class="help-section">
+          <h4><i class="fas fa-mouse-pointer"></i> Հիմնական օգտագործում</h4>
+          <ul>
+            <li><strong>Սիմվոլների ավելացում</strong>՝ սեղմեք ցանկացած սիմվոլի վրա ներքևում գտնվող վահանակից կամ լողացող
+              վահանակից</li>
+            <li><strong>Նախադիտում</strong>՝ խմբագրիչում ձեր մուտքագրած արտահայտությունը ավտոմատ կերպով ներկայացվում է
+              այստեղ</li>
+            <li><strong>Չեղարկել/Կրկնել</strong>՝ օգտագործեք «Հետ» և «Առաջ» կոճակները՝ առավելագույնը 20 անգամ</li>
+            <li><strong>Մաքրել</strong>՝ օգտագործեք «Մաքրել ամբողջը» կոճակը նորից սկսելու համար</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4><i class="fas fa-paint-brush"></i> Ձևավորում & Գույներ</h4>
+          <ul>
+            <li><strong>Գույներ</strong>՝ նշեք տեքստը և սեղմեք գույնը ընտրելու համար։
+              Եթե չնշեք որևէ տեքստ և ընտրեք գույն, այն կկիրառվի ամբողջ արտահայտության վրա</li>
+            <li><strong>Չափսը</strong>՝ փոխեք բանաձևի չափսը այս կոճակի օգնությամբ</li>
+            <li><strong>Տողերի միջև</strong>՝ կարգավորում է տողերի միջև հեռավորությունը</li>
+            <li><strong>Բացատ</strong>՝ օգտագործեք «\» մեկ բացատ դնելու համար </li>
+            <li><strong>Նոր տող</strong>՝ օգտագործեք «\\\» տողադարձի համար։
+              «\\\\\\\\» օգտագործելու դեպքում կկատարվի տողադարձ 2 տողով, «\\\\\\\\\\\\» օգտագործելու դեպքում՝ 3 տողով և
+              այդպես շարունակ</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4><i class="fas fa-lightbulb"></i> Արագ սկսելու համար</h4>
+          <ul>
+            <li><strong>Օրինակներ</strong>՝ պարունակում է պատրաստի բանաձևեր տարբեր բնագավառներից</li>
+            <li><strong>Միջավայր</strong>՝ արտահայտությունների կաղապարների տարբեր մոդելներ</li>
+            <li><strong>Սիմվոլների որոնում</strong>՝ օգտագործեք անհրաժեշտ սիմվոլը արագ գտնելու համար</li>
+            <li><strong>Լողացող վահանակ</strong>՝ օգտակար է բոլոր տեսակի սարքերի օգտագործման ժամանակ, հատկապես՝
+              սենսորային</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4><i class="fas fa-download"></i> Արտահանում & Պահպանում</h4>
+          <ul>
+            <li><strong>PNG</strong>՝ սիրողական որակի պատկերի պահպանման համար</li>
+            <li><strong>SVG</strong>՝ վեկտորային պատկեր մասնագիտական աշխատանքի համար։
+              Չի կորցնում որակը պատկերը մեծացնելիս կամ փոքրացնելիս</li>
+            <li><strong>Հղումներ</strong>՝ ավելացրեք հղում ցանկացած տեքստի (լինի բառ, թե սիմվոլ) վրա՝ «Ավելացնել հղում»
+              գործիքով</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4><i class="fas fa-keyboard"></i> Ստեղնաշարի կոմբինացիաներ</h4>
+          <ul>
+            <li><strong>Ctrl+Z</strong> կամ <strong>Cmd+Z</strong>՝ չեղարկել</li>
+            <li><strong>Ctrl+Y</strong> կամ <strong>Cmd+Shift+Z</strong>՝ կրկնել</li>
+            <li><strong>Tab</strong>՝ դուրս գալ փակագծերից կամ ընտրության մեջ նավարկել</li>
+            <li><strong>F1</strong>՝ բացել օգնության այս պատուհանը</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4><i class="fas fa-code"></i> հաճախ օգտագործվող հրամաններ</h4>
+          <ul>
+            <li><strong>\frac{համարիչ}{հայտարար}</strong>՝ կոտորակ ստեղծելու համար</li>
+            <li><strong>\sqrt{արտահայտություն}</strong>՝ քառակուսի արմատ</li>
+            <li><strong>^{աստիճանացույց}</strong> և <strong>_{ենթատեքստ}</strong></li>
+            <li><strong>\left(...\right)</strong>՝ ցանկացած մեծության արտահայտություն փակագծերի ներսում պահելու համար
+            </li>
+            <li><strong>╲begin{} ... ╲end{}</strong>՝ միջավայրերի համար</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Examples modal -->
+  <div class="examples-modal" id="examplesModal">
+    <div class="examples-modal-content">
+      <div class="examples-modal-header">
+        <h3><i class="fas fa-lightbulb"></i> Պատրաստի օրինակներ</h3>
+        <p>Ընտրեք օրինակ՝ տեսնելու համար, թե ինչպես գրել բարդ մաթեմատիկական արտահայտություններ</p>
+        <button class="examples-close-btn" id="examplesCloseBtn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="examples-categories">
+        <button class="examples-category-btn active" data-category="integrals">Ինտեգրալներ</button>
+        <button class="examples-category-btn" data-category="summations">Գումարներ</button>
+        <button class="examples-category-btn" data-category="matrices">Մատրիցներ</button>
+        <button class="examples-category-btn" data-category="calculus">Մաթ. անալիզ</button>
+        <button class="examples-category-btn" data-category="statistics">Վիճակագրություն</button>
+        <button class="examples-category-btn" data-category="physics">Ֆիզիկա</button>
+      </div>
+      <div class="examples-grid" id="examplesGrid"></div>
+    </div>
+  </div>
+
+  <!-- ENVIRONMENTS MODAL -->
+  <div class="environments-modal" id="environmentsModal">
+    <div class="environments-modal-content">
+      <div class="environments-modal-header">
+        <h3><i class="fas fa-layer-group"></i> LaTeX Միջավայրներ</h3>
+        <p>Ընտրեք միջավայրը՝ բարդ մաթեմատիկական արտահայտություններ ֆորմատավորելու համար</p>
+        <button class="environments-close-btn" id="environmentsCloseBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="environments-search-container">
+        <input type="text" class="environments-search" id="environmentsSearch" placeholder="Որոնել միջավայր...">
+      </div>
+
+      <div class="environments-container">
+        <div class="environments-grid" id="environmentsGrid">
+          <!-- Environments will be populated here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL modal -->
+  <div class="url-modal" id="urlModal">
+    <div class="url-modal-content">
+      <div class="url-modal-title"><i class="fas fa-link"></i> Ավելացնել հղում</div>
+      <div class="url-input-group">
+        <label for="urlInput">URL:</label>
+        <input type="url" id="urlInput" class="url-input" placeholder="https://example.com" value="https://">
+      </div>
+      <div class="url-modal-buttons">
+        <button class="url-modal-button cancel" id="urlCancelBtn">Չեղարկել</button>
+        <button class="url-modal-button add" id="urlAddBtn">Ավելացնել</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRO Subscription Modal (Only 2 features) -->
+  <div class="pro-modal" id="proModal">
+    <div class="pro-modal-content">
+      <div class="pro-modal-header">
+        <h3><i class="fas fa-crown"></i> MathFlow Pro</h3>
+        <p>Բաժանորդագրվեք՝ պրեմիում գործառույթները բացելու համար</p>
+        <button class="pro-modal-close-btn" id="proModalCloseBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="pro-modal-body">
+        <div class="pro-feature">
+          <div class="pro-feature-icon">
+            <i class="fas fa-layer-group"></i>
+          </div>
+          <div class="pro-feature-text">
+            <h4>Ընդլայնված միջավայրեր</h4>
+            <p>Ստացեք հասանելիություն պրոֆեսիոնալ միջավայրերի, այդ թվում՝ equation arrays, aligns և բարդ մաթեմատիկական
+              փաստաթղթերի համար նախատեսված ընդլայնված ձևաչափման գործիքների:</p>
+          </div>
+        </div>
+        <div class="pro-feature">
+          <div class="pro-feature-icon">
+            <i class="fas fa-file-code"></i>
+          </div>
+          <div class="pro-feature-text">
+            <h4>Բարձրորակ SVG արտահանում</h4>
+            <p>Արտահանեք վեկտորային գրաֆիկա թափանցիկ ֆոնով և մասնագիտական որակի արտադրանքով, որը հարմար է
+              հրապարակումների և տպագրության համար:</p>
+          </div>
+        </div>
+      </div>
+      <div class="pro-modal-footer">
+        <button class="pro-subscribe-btn" id="proSubscribeBtn">
+          <i class="fas fa-rocket"></i>
+          Անցնել Pro-ի 2000դր/ամիս
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== THIRD-PARTY JS ===== -->
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr@1.8.2/dist/pickr.min.js"></script>
+
+  <!-- ===== APP JS (order matters — constants first, main last) ===== -->
+  <script src="js/bundle.min.js"></script>
+
+</body>
+
+</html>
